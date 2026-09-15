@@ -1,0 +1,134 @@
+import SwiftUI
+import AppKit
+
+// ============================================================================
+//  Timer Deck — App 进入点
+//  常驻菜单栏（不占 Dock），对应浏览器版的 background + action popup
+// ============================================================================
+
+@main
+struct TimerDeckApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    @ObservedObject private var store = Store.shared
+
+    var body: some Scene {
+        MenuBarExtra {
+            DeckPanelView()
+        } label: {
+            MenuBarLabel()
+        }
+        .menuBarExtraStyle(.window)
+
+        Window(I18n.t("dashTitle"), id: "dashboard") {
+            DashboardView()
+        }
+        .windowResizability(.contentMinSize)
+
+        Window(I18n.t("optionsTitle"), id: "settings") {
+            SettingsView()
+        }
+        .windowResizability(.contentSize)
+    }
+}
+
+// ---------------------------------------------------------------------------
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var didNotify = false
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // 开发用：逻辑自测
+        if SelfTest.runIfRequested() {
+            NSApp.terminate(nil)
+            return
+        }
+
+        // 开发用：把界面渲染成 PNG 后直接结束
+        if UIRenderer.runIfRequested() {
+            NSApp.terminate(nil)
+            return
+        }
+
+        // 开发用：验证菜单栏右键菜单（合成一次右键事件）
+        if CommandLine.arguments.contains("--probe-menu") {
+            Store.shared.startTicking()
+            NSApp.setActivationPolicy(.accessory)
+            StatusMenuController.shared.install()
+            StatusMenuController.shared.runProbe()
+            return
+        }
+
+        Store.shared.startTicking()
+
+        // 菜单栏图示的右键菜单（退出 / 设定 / 仪表板）
+        StatusMenuController.shared.install()
+
+        if Store.shared.settings.notify {
+            Notifier.shared.requestPermission()
+        }
+
+        // 纯菜单栏 app，不要 Dock 图示
+        NSApp.setActivationPolicy(.accessory)
+
+        // 首次启动给个提示，免得用户找不到
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self = self, !self.didNotify else { return }
+            self.didNotify = true
+            Notifier.shared.fire(
+                title: I18n.t("appName"),
+                body: I18n.t("hintKeepRunning")
+            )
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        Store.shared.save()
+        Store.shared.stopTicking()
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  菜单栏图示
+//  只有一个计时器在跑时 → 直接显示剩余时间；多个 → 显示数量
+//  （对应浏览器版的 action badge，但多了「看得到倒数」这一层）
+// ---------------------------------------------------------------------------
+
+struct MenuBarLabel: View {
+    @ObservedObject private var store = Store.shared
+    @Environment(\.openWindow) private var openWindow
+
+    /// 关了「選單列顯示」就什么都不显示，只留图示
+    private var text: String? {
+        guard store.settings.badge else { return nil }
+        return Engine.menuBarText(store.timers, now: store.now)
+    }
+
+    var body: some View {
+        MenuBarLabelContent(text: text)
+            .accessibilityLabel("Timer Deck")
+            .onAppear {
+                // 让菜单栏的右键菜单也能开视窗
+                StatusMenuController.openWindow = openWindow
+            }
+    }
+}
+
+/// 图示 + 文字。抽出来是为了能离屏渲染成预览图。
+struct MenuBarLabelContent: View {
+    var text: String?
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "timer")
+            if let text {
+                Text(text)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
+        }
+    }
+}

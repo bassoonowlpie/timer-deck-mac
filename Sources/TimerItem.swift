@@ -110,11 +110,13 @@ struct Settings: Codable, Equatable {
     var recentDurations: [Double] = []
     /// 被使用者从表单里删掉的原生名称建议（删掉就不再出现）
     var hiddenNames: [String] = []
+    /// 首次启动提示是否已显示过（只提示一次，避免每次启动都弹通知）
+    var hintShown: Bool = false
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case theme, lang, badge, notify, sound, soundVersion, recentNames, recentDurations, hiddenNames
+        case theme, lang, badge, notify, sound, soundVersion, recentNames, recentDurations, hiddenNames, hintShown
     }
 
     init(from decoder: Decoder) throws {
@@ -128,6 +130,7 @@ struct Settings: Codable, Equatable {
         recentNames = (try? c.decode([String].self, forKey: .recentNames)) ?? []
         recentDurations = (try? c.decode([Double].self, forKey: .recentDurations)) ?? []
         hiddenNames = (try? c.decode([String].self, forKey: .hiddenNames)) ?? []
+        hintShown = (try? c.decode(Bool.self, forKey: .hintShown)) ?? false
     }
 }
 

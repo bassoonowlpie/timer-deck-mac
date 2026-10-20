@@ -34,7 +34,6 @@ struct TimerDeckApp: App {
 // ---------------------------------------------------------------------------
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var didNotify = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 开发用：逻辑自测
@@ -70,10 +69,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 纯菜单栏 app，不要 Dock 图示
         NSApp.setActivationPolicy(.accessory)
 
-        // 首次启动给个提示，免得用户找不到
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-            guard let self = self, !self.didNotify else { return }
-            self.didNotify = true
+        // 首次启动给个提示，免得用户找不到。
+        // 提示状态写进 settings（只提示一次）—— 之前用内存变量，每次启动都会重弹。
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            guard !Store.shared.settings.hintShown else { return }
+            Store.shared.updateSettings { $0.hintShown = true }
             Notifier.shared.fire(
                 title: I18n.t("appName"),
                 body: I18n.t("hintKeepRunning")

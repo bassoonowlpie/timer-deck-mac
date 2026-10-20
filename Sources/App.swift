@@ -102,13 +102,13 @@ struct MenuBarLabel: View {
     @Environment(\.openWindow) private var openWindow
 
     /// 关了「選單列顯示」就什么都不显示，只留图示
-    private var text: String? {
-        guard store.settings.badge else { return nil }
-        return Engine.menuBarText(store.timers, now: store.now)
+    private var segments: [Engine.MenuBarSegment] {
+        guard store.settings.badge else { return [] }
+        return Engine.menuBarSegments(store.timers, now: store.now)
     }
 
     var body: some View {
-        MenuBarLabelContent(text: text)
+        MenuBarLabelContent(segments: segments)
             .accessibilityLabel("Timer Deck")
             .onAppear {
                 // 让菜单栏的右键菜单也能开视窗
@@ -119,13 +119,33 @@ struct MenuBarLabel: View {
 
 /// 图示 + 文字。抽出来是为了能离屏渲染成预览图。
 struct MenuBarLabelContent: View {
-    var text: String?
+    var segments: [Engine.MenuBarSegment] = []
+
+    /// 所有计时器拼成「单一」文字 —— 真实菜单栏对 HStack 里多个 Text 的渲染会掉字，
+    /// 只出第一个；合成一个 AttributedString 才稳定，还能各自保留颜色。
+    /// 两个或以上进行中时，前面加上计时器名（如「Honor 19:33 · iPhone 19:35」）。
+    private var label: AttributedString {
+        var out = AttributedString()
+        let showNames = segments.count >= 2
+        for (i, seg) in segments.enumerated() {
+            if i > 0 { out += AttributedString(" · ") }
+            if showNames {
+                var nm = AttributedString(seg.name + " ")
+                nm.foregroundColor = Color(hex: seg.accentHex)
+                out += nm
+            }
+            var tm = AttributedString(seg.text)
+            tm.foregroundColor = Color(hex: seg.accentHex)
+            out += tm
+        }
+        return out
+    }
 
     var body: some View {
         HStack(spacing: 3) {
             Image(systemName: "timer")
-            if let text {
-                Text(text)
+            if !segments.isEmpty {
+                Text(label)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .monospacedDigit()
             }

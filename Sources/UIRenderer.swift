@@ -269,11 +269,16 @@ struct ChipShowcase: View {
 // ---------------------------------------------------------------------------
 
 struct MenuBarShowcase: View {
-    private static let states: [(label: String, text: String?)] = [
-        ("一個計時器在倒數 → 直接顯示剩餘時間", "12:34"),
-        ("超過一小時", "1:15:00"),
-        ("三個計時器在跑 → 顯示數量", "3"),
-        ("沒有計時器在跑 → 只有圖示", nil),
+    private static let states: [(label: String, segments: [Engine.MenuBarSegment])] = [
+        ("一個計時器在倒數 → 只顯示剩餘時間",
+         [.init(name: "煮麵", text: "12:34", accentHex: "#3D7BFF")]),
+        ("超過一小時",
+         [.init(name: "長休", text: "1:15:00", accentHex: "#3D7BFF")]),
+        ("多個計時器在跑 → 顯示名稱 + 時間，各自顏色",
+         [.init(name: "煮麵", text: "12:34", accentHex: "#3D7BFF"),
+          .init(name: "小睡", text: "45:12", accentHex: "#5BCFC5"),
+          .init(name: "沖涼", text: "1:03:00", accentHex: "#FFA94D")]),
+        ("沒有計時器在跑 → 只有圖示", []),
     ]
 
     var body: some View {
@@ -288,7 +293,7 @@ struct MenuBarShowcase: View {
 
                         HStack(spacing: 13) {
                             Spacer(minLength: 0)
-                            MenuBarLabelContent(text: state.text)
+                            MenuBarLabelContent(segments: state.segments)
                                 .foregroundStyle(.white)
                             Image(systemName: "wifi")
                             Image(systemName: "battery.100")

@@ -10,7 +10,7 @@ macOS 選單列計時器 —— 無需開啟視窗，隨時掌握剩餘時間。
 
 - **常駐選單列** —— 不佔用 Dock，不干擾工作流程
 - **多計時器並行** —— 每個計時器可獨立設定時長與提示音
-- **選單列顯示剩餘時間** —— 當僅有一個計時器運行時，選單列直接顯示倒數數字（`12:34`）
+- **選單列直接看倒數** —— 單一計時器顯示剩餘時間（`12:34`）；同時有兩個以上時，全部並列顯示並標示名稱（`Honor 18:05 · iPhone 18:07`），各自以該計時器的顏色區分
 - **預設計時器一鍵啟動** —— 常用時長可預先儲存，新增後自動開始倒數
 - **右鍵選單** —— 右鍵點擊選單列圖示，即可開啟儀表板、設定或退出
 - **提示音可選** —— 內建四種音效（ping / chime / bell / alarm）
@@ -26,6 +26,10 @@ macOS 選單列計時器 —— 無需開啟視窗，隨時掌握剩餘時間。
 | 儀表板 | 設定 |
 | :---: | :---: |
 | ![儀表板](screenshots/03-dashboard.png) | ![設定](screenshots/04-settings.png) |
+
+**選單列顯示** —— 一個計時器只顯示時間；兩個以上則並列顯示名稱與時間，各自以該計時器的顏色區分：
+
+![選單列](screenshots/14-menubar.png)
 
 ## 下載安裝
 
@@ -97,7 +101,7 @@ open ".build/Timer Deck.app"
 
 ## English
 
-**Timer Deck** is a lightweight menu-bar timer for macOS 13+ (Apple Silicon). Timers stay one click away, the remaining time is displayed directly in the menu bar when a single timer is active, and everything is stored locally — the app makes no network requests.
+**Timer Deck** is a lightweight menu-bar timer for macOS 13+ (Apple Silicon). Timers stay one click away and the countdown is shown directly in the menu bar: a single running timer displays its remaining time (`12:34`), while two or more running timers are listed side by side with their names and each timer's own accent color (`Honor 18:05 · iPhone 18:07`). Everything is stored locally — the app makes no network requests.
 
 **Install:** download the latest `TimerDeck-x.x.x-macOS.zip` from [Releases](https://github.com/bassoonowlpie/timer-deck-mac/releases/latest), unzip, and drag `Timer Deck.app` into `/Applications`.
 

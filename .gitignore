@@ -3,6 +3,8 @@
 .build/
 dist/
 *.zip
+# 專案根目錄嘅測試用 app（本機直接跑嗰個），同樣唔入版控
+/Timer Deck.app/
 
 # ── 開發用檔案 ────────────────────────────────────────────
 # preview/ 是本機渲染的檢查圖；README 用的是 screenshots/

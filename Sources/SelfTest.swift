@@ -102,13 +102,19 @@ enum SelfTest {
         a.status = .running; a.endsAt = now + 300_000
         var b = Engine.makeTimer(name: "小睡", seconds: 30)
         b.status = .running; b.endsAt = now + 30_000
-        check("没有进行中 → nil", Engine.menuBarText([t], now: now) == nil)
-        check("只有一个 → 显示剩余时间", Engine.menuBarText([a], now: now) == "05:00")
-        check("超过一小时 → 1:15:00", Engine.menuBarText(
-            [Engine.started(Engine.makeTimer(name: "长", seconds: 4500), now: now)], now: now) == "1:15:00")
-        check("两个 → 显示数量", Engine.menuBarText([a, b], now: now) == "2")
-        check("一个在跑 + 一个暂停 → 仍是时间", Engine.menuBarText([a, t], now: now) == "05:00")
-        check("只剩最后一个数字也看得见", Engine.menuBarText([b], now: now) == "00:30")
+        check("没有进行中 → 空", Engine.menuBarSegments([t], now: now).isEmpty)
+        check("只有一个 → 显示剩余时间",
+              Engine.menuBarSegments([a], now: now).map(\.text) == ["05:00"])
+        check("超过一小时 → 1:15:00",
+              Engine.menuBarSegments(
+                [Engine.started(Engine.makeTimer(name: "长", seconds: 4500), now: now)], now: now
+              ).map(\.text) == ["1:15:00"])
+        let segs = Engine.menuBarSegments([a, b], now: now)
+        check("两个 → 全部显示，按剩余升序", segs.map(\.text) == ["00:30", "05:00"])
+        check("各自带 accent 色", segs.first?.accentHex == b.accent && segs.last?.accentHex == a.accent)
+        check("各自带计时器名", segs.map(\.name) == [b.name, a.name])
+        check("一个在跑 + 一个暂停 → 只显示跑的",
+              Engine.menuBarSegments([a, t], now: now).map(\.text) == ["05:00"])
 
         print("\n=== 8. 铃声版本迁移 ===")
         check("SOUND_VERSION = 2", Engine.soundVersion == 2)

@@ -17,7 +17,7 @@ cd "$(dirname "$0")"
 APP_NAME="Timer Deck"
 EXEC_NAME="TimerDeck"
 BUNDLE_ID="com.bassoonowlpie.timerdeck"
-VERSION="1.4.0"
+VERSION="1.5.0"
 BUILD_DIR=".build"
 APP="$BUILD_DIR/$APP_NAME.app"
 # 项目自身目录（音效等资源就在本项目内，clone 后可直接编译）

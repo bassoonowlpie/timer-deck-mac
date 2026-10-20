@@ -269,25 +269,30 @@ enum Engine {
         return soonest
     }
 
+    /// 菜单栏图示旁边要显示的一格（对应一个进行中的计时器）。
+    struct MenuBarSegment {
+        let name: String
+        let text: String
+        let accentHex: String
+    }
+
     /// 菜单栏图示旁边要显示的文字。
     ///
-    /// - 只有 **一个** 计时器在倒数 → 直接显示它的剩余时间（`12:34`／`1:15:00`）
-    /// - **多个** 在倒数 → 显示数量（`3`）
-    /// - 一个都没有在跑 → `nil`（只留下图示）
-    static func menuBarText(_ timers: [TimerItem], now: Double) -> String? {
-        var running = 0
-        var shortest = Double.greatestFiniteMagnitude
+    /// - **所有**进行中的计时器都会显示，各自上自己的 accent 色
+    /// - 按剩余时间升序（最快到期的排最前）
+    /// - 一个都没有在跑 → 空阵列（只留下图示）
+    static func menuBarSegments(_ timers: [TimerItem], now: Double) -> [MenuBarSegment] {
+        var running: [(remaining: Double, segment: MenuBarSegment)] = []
 
         for t in timers {
             let v = view(t, now: now)
             guard v.status == .running else { continue }
-            running += 1
-            if v.remaining < shortest { shortest = v.remaining }
+            let seg = MenuBarSegment(name: t.name, text: formatClock(v.remaining), accentHex: t.accent)
+            running.append((v.remaining, seg))
         }
 
-        guard running > 0 else { return nil }
-        if running == 1 { return formatClock(shortest) }
-        return running > 99 ? "99+" : String(running)
+        running.sort { $0.remaining < $1.remaining }
+        return running.map { $0.segment }
     }
 
     /// 环形进度条的色调

@@ -279,6 +279,7 @@ enum Engine {
     /// 菜单栏图示旁边要显示的文字。
     ///
     /// - **所有**进行中的计时器都会显示，各自上自己的 accent 色
+    /// - 每一格都含 name + 时间（如「煮麵 12:34」），由 UI 决定怎么排
     /// - 按剩余时间升序（最快到期的排最前）
     /// - 一个都没有在跑 → 空阵列（只留下图示）
     static func menuBarSegments(_ timers: [TimerItem], now: Double) -> [MenuBarSegment] {

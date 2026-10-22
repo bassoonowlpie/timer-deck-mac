@@ -270,7 +270,7 @@ struct ChipShowcase: View {
 
 struct MenuBarShowcase: View {
     private static let states: [(label: String, segments: [Engine.MenuBarSegment])] = [
-        ("一個計時器在倒數 → 只顯示剩餘時間",
+        ("一個計時器在倒數 → 顯示名稱 + 剩餘時間",
          [.init(name: "煮麵", text: "12:34", accentHex: "#3D7BFF")]),
         ("超過一小時",
          [.init(name: "長休", text: "1:15:00", accentHex: "#3D7BFF")]),

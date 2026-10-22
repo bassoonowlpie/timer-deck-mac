@@ -123,17 +123,14 @@ struct MenuBarLabelContent: View {
 
     /// 所有计时器拼成「单一」文字 —— 真实菜单栏对 HStack 里多个 Text 的渲染会掉字，
     /// 只出第一个；合成一个 AttributedString 才稳定，还能各自保留颜色。
-    /// 两个或以上进行中时，前面加上计时器名（如「Honor 19:33 · iPhone 19:35」）。
+    /// 每个计时器前面都加上名称（如「煮麵 12:34 · 泡茶 45:12」）。
     private var label: AttributedString {
         var out = AttributedString()
-        let showNames = segments.count >= 2
         for (i, seg) in segments.enumerated() {
             if i > 0 { out += AttributedString(" · ") }
-            if showNames {
-                var nm = AttributedString(seg.name + " ")
-                nm.foregroundColor = Color(hex: seg.accentHex)
-                out += nm
-            }
+            var nm = AttributedString(seg.name + " ")
+            nm.foregroundColor = Color(hex: seg.accentHex)
+            out += nm
             var tm = AttributedString(seg.text)
             tm.foregroundColor = Color(hex: seg.accentHex)
             out += tm

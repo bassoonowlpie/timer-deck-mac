@@ -134,6 +134,20 @@ enum SelfTest {
         check("顺序对调结果一样", Engine.menuBarResetTargetID([b, a], now: now) == b.id)
         check("有进行中时，暂停的不会被选中", Engine.menuBarResetTargetID([t, b], now: now) == b.id)
 
+        print("\n=== 7c. 面板内中键：指边个重设边个 ===")
+        check("hover 中嘅计时器优先（即使佢唔系最快到期）",
+              Engine.resetTargetID([a, b], hoveredID: a.id, now: now) == a.id)
+        check("hover 中嘅 idle 计时器都照重设",
+              Engine.resetTargetID([b, idle1], hoveredID: idle1.id, now: now) == idle1.id)
+        check("hover 中嘅暂停计时器都照重设",
+              Engine.resetTargetID([b, paused], hoveredID: paused.id, now: now) == paused.id)
+        check("无 hover → 退回最快到期",
+              Engine.resetTargetID([a, b], hoveredID: nil, now: now) == b.id)
+        check("hover 咗个唔存在嘅 ID → 退回最快到期",
+              Engine.resetTargetID([a, b], hoveredID: "已删除", now: now) == b.id)
+        check("空清单 + hover → nil",
+              Engine.resetTargetID([], hoveredID: "anything", now: now) == nil)
+
 
         print("\n=== 8. 铃声版本迁移 ===")
         check("SOUND_VERSION = 2", Engine.soundVersion == 2)

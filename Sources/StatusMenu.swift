@@ -6,14 +6,17 @@ import Combine
 //  Timer Deck — 菜单栏图示的「右键菜单」与「中键重设」
 //
 //  SwiftUI 的 MenuBarExtra 只处理左键，官方没有提供右键 / 中键 API。
-//  这里拦截落在菜单栏图示上的额外按键：
-//    · 右键 → 弹出真正的 NSMenu
-//    · 中键（鼠标滚轮按下去）→ 重设最快到期的计时器
+//  这里用 NSEvent 监听拦截额外按键：
+//    · 右键（只限选单列图示）→ 弹出真正的 NSMenu；面板内右键交返 SwiftUI contextMenu
+//    · 中键（鼠标滚轮按下去）→ **本 app 任何一个视窗**都受理：
+//        面板／仪表板入面指住边个计时器就重设边个，
+//        撳选单列图示就重设最快到期嗰个（冇进行中都照重设）
 //
-//  中键要两条路一起装：macOS 的 NSStatusBarWindow 对 .otherMouseDown
-//  不一定会派发给 app 自己，本地监听有机会收不到；全域鼠标监听做兜底，
-//  再用鼠标坐标确认落在图示范围内。全域「鼠标」事件不需要「辅助使用」权限。
-//  左键完全不受影响，仍然是原来的面板。
+//  ⚠️ 早期版本净系认 NSStatusBarWindow，实测用户几乎全部中键都撳喺面板入面
+//  （诊断日志：win#=571698、y≈1120，唔系图示视窗 win#=6、y≈1424），
+//  所以改坐标范围点调都系「撳咗冇反应」。而家靠 hover 目标 + 全视窗监听解决。
+//  左键完全不受影响，仍然是原来的面板。整套做法只收本 app 自己的事件，
+//  不需要「辅助使用」权限，也不用改任何系统设定。
 // ============================================================================
 
 /// 选单列上的短暂提示（约 2 秒）。按中键之后一定要有可见回应，
@@ -57,30 +60,37 @@ final class StatusMenuController: NSObject {
     /// 装上右键 / 中键监听。只需要装一次。
     func install() {
         guard monitor == nil else { return }
+
+        // ── 本 app 自己的事件 ──────────────────────────────────────────
+        // 关键：中键**不再**限制喺 NSStatusBarWindow。面板、仪表板、设定视窗
+        // 收到嘅 .otherMouseDown 一律受理，再用 hover 目标决定重设边个。
         monitor = NSEvent.addLocalMonitorForEvents(
             matching: [.rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp]
         ) { [weak self] event in
-            guard let self, self.isStatusBarWindow(event.window) else { return event }
+            guard let self else { return event }
 
-            // 右键 → 菜单（down 弹，up 一起吃掉，免得面板被带出来）
-            if event.type == .rightMouseDown { self.showMenu(for: event) }
-            if event.type == .rightMouseDown || event.type == .rightMouseUp { return nil }
+            // 右键：净系选单列图示弹菜单。面板入面要留返畀 SwiftUI 嘅 contextMenu。
+            if event.type == .rightMouseDown || event.type == .rightMouseUp {
+                guard self.isStatusBarWindow(event.window) else { return event }
+                if event.type == .rightMouseDown { self.showMenu(for: event) }
+                return nil
+            }
 
             // 中键 / 其他额外按键 → 重设。
             // 按事件型别判断而唔靠 buttonNumber：macOS 实机中键系 .otherMouseDown，
             // 但数字会因鼠标驱动而异（合成事件甚至全部报 0），用型别最稳。
-            if event.type == .otherMouseDown { self.resetFromMenuBar() }
+            if event.type == .otherMouseDown { self.resetFromMiddleClick() }
             return nil
         }
 
-        // 兜底：状态列视窗有时唔会派发 .otherMouseDown 畀 app 自己，
-        // 本地监听收唔到。全域监听只收「发去其他 process」嘅鼠标事件，
-        // 唔需要任何权限；再用坐标确认系按喺我哋个图示上面。
+        // ── 兜底：选单列图示有时属于系统视窗，事件唔会派发畀本 app ──────
+        // 全域监听只收「发去其他 process」嘅鼠标事件，唔需要任何权限；
+        // 呢条路唔会有 hover 目标，所以会重设「最快到期／第一个」。
         globalMonitor = NSEvent.addGlobalMonitorForEvents(
             matching: [.otherMouseDown]
         ) { [weak self] _ in
             guard let self, self.isMouseOverStatusBarIcon() else { return }
-            DispatchQueue.main.async { self.resetFromMenuBar() }
+            DispatchQueue.main.async { self.resetFromMiddleClick() }
         }
     }
 
@@ -99,16 +109,18 @@ final class StatusMenuController: NSObject {
         return p.x >= win.frame.minX - 160 && p.x <= win.frame.maxX + 40
     }
 
-    /// 重设选单列上排最前（最快到期）的进行中计时器。
+    /// 中键重设：**指住边个就重设边个**。
+    /// 游标停喺清单某一列（面板／仪表板）就用嗰个 ID；否则退回最快到期／第一个。
     /// 效果跟面板里的「重设」按钮一致：停低、时长度归回初始值、不自动倒数。
-    /// 无论成功与否都在选单列给一个短暂提示，让用户知道按键有被收到。
-    private func resetFromMenuBar() {
+    /// 无论成功与否都给一个可见提示，让用户知道按键有被收到。
+    private func resetFromMiddleClick() {
         // 本地与全域监听可能同时看到同一次点击，0.4 秒内只处理一次
         let now = Date()
         guard now.timeIntervalSince(lastResetAt) > 0.4 else { return }
 
         let store = Store.shared
-        guard let id = Engine.menuBarResetTargetID(store.timers, now: store.now) else {
+        let hoveredID = MiddleClickTracker.shared.hoveredTimerID
+        guard let id = Engine.resetTargetID(store.timers, hoveredID: hoveredID, now: store.now) else {
             MenuBarFlash.shared.show(I18n.t("flashNoTimers"))
             return
         }
@@ -116,7 +128,10 @@ final class StatusMenuController: NSObject {
         lastResetAt = now
         let name = store.timers.first(where: { $0.id == id })?.name ?? ""
         Actions.reset(id)
-        MenuBarFlash.shared.show("✓ " + I18n.t("toastReset") + " · " + String(name.prefix(10)))
+        let message = "✓ " + I18n.t("toastReset") + " · " + String(name.prefix(10))
+        MenuBarFlash.shared.show(message)
+        // 面板／仪表板可能开住，选单列提示会睇唔到 —— 同时广播畀面板显示 toast
+        NotificationCenter.default.post(name: .timerDeckMiddleClickReset, object: message)
         if probeMode { probeLog.append("✅ 中键重设 → \(id)") }
     }
 
@@ -250,6 +265,72 @@ final class StatusMenuController: NSObject {
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
                 self.finishProbe(success: self.probeLog.contains { $0.hasPrefix("✅") })
+            }
+        }
+    }
+
+    /// `--probe-row`：模拟用户喺**面板入面**对住某一列撳中键。
+    /// 早期嘅 probe 净系测选单列图示视窗，所以真实场景坏咗都测唔出。
+    /// 呢度用一个普通 NSWindow（非 status bar）+ hover 目标，
+    /// 验证「指边个重设边个」同「本 app 任何视窗都受理」两件事。
+    func runRowProbe() {
+        probeMode = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let self else { return }
+
+            let now = Engine.nowMS()
+            var fastest = Engine.makeTimer(name: "最快", seconds: 30)
+            fastest.status = .running
+            fastest.remaining = 30_000
+            fastest.endsAt = now + 30_000
+            var slower = Engine.makeTimer(name: "指住呢个", seconds: 300)
+            slower.status = .running
+            slower.remaining = 300_000
+            slower.endsAt = now + 300_000
+            Store.shared.setTimers([fastest, slower])
+            MiddleClickTracker.shared.hoveredTimerID = slower.id
+            self.probeLog.append("放入 2 个进行中计时器，hover 目标 = 较慢嗰个（\(slower.name)）")
+
+            // 一个普通视窗，刻意唔系 NSStatusBarWindow
+            let win = NSWindow(
+                contentRect: NSRect(x: 300, y: 300, width: 380, height: 480),
+                styleMask: [.titled, .closable],
+                backing: .buffered, defer: false
+            )
+            win.title = "探针面板"
+            win.makeKeyAndOrderFront(nil)
+            self.probeLog.append("建立普通面板视窗 windowNumber \(win.windowNumber)（非 status bar）")
+
+            guard let event = NSEvent.mouseEvent(
+                with: .otherMouseDown,
+                location: NSPoint(x: 190, y: 240),
+                modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: win.windowNumber,
+                context: nil,
+                eventNumber: 0,
+                clickCount: 1,
+                pressure: 1
+            ) else {
+                self.probeLog.append("❌ 无法建立合成中键事件")
+                self.finishProbe(success: false)
+                return
+            }
+            self.probeLog.append("→ 投递合成中键事件到面板视窗")
+            NSApp.postEvent(event, atStart: false)
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                let slow = Store.shared.timers.first { $0.id == slower.id }
+                let fast = Store.shared.timers.first { $0.id == fastest.id }
+                let slowReset = slow?.status == .idle && slow?.remaining == 300_000
+                let fastUntouched = fast?.status == .running
+                self.probeLog.append(slowReset
+                    ? "✅ 面板中键重设咗「指住呢个」（idle／05:00）"
+                    : "❌ 面板中键冇重设 hover 目标（status=\(String(describing: slow?.status))）")
+                self.probeLog.append(fastUntouched
+                    ? "✅ 最快到期嗰个无受影响"
+                    : "❌ 错误噉重设咗最快到期嗰个")
+                self.finishProbe(success: slowReset && fastUntouched)
             }
         }
     }

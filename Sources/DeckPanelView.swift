@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 // ============================================================================
 //  Timer Deck — 菜单栏面板
@@ -61,6 +62,16 @@ struct DeckPanelView: View {
             if let t = previewToast {
                 toast = t
                 toastIcon = previewToastIcon
+            }
+        }
+        // 中键重设喺面板入面发生时，顶部状态条显示确认讯息（唔会挡住按钮）
+        .onReceive(NotificationCenter.default.publisher(for: .timerDeckMiddleClickReset)) { note in
+            guard let message = note.object as? String else { return }
+            showToast(message, icon: "arrow.counterclockwise.circle.fill")
+        }
+        .onDisappear {
+            if MiddleClickTracker.shared.hoveredTimerID != nil {
+                MiddleClickTracker.shared.hoveredTimerID = nil
             }
         }
     }
@@ -451,7 +462,15 @@ struct TimerRowView: View {
                 .fill(hovering ? theme.surfaceHover.opacity(theme.isDark ? 0.6 : 1) : .clear)
         )
         .contentShape(Rectangle())
-        .onHover { hovering = $0 }
+        .onHover { inside in
+            hovering = inside
+            // 中键重设用：记低游标而家停喺边个计时器上
+            if inside {
+                MiddleClickTracker.shared.hoveredTimerID = timer.id
+            } else if MiddleClickTracker.shared.hoveredTimerID == timer.id {
+                MiddleClickTracker.shared.hoveredTimerID = nil
+            }
+        }
         .contextMenu {
             Button(I18n.t("rename"), action: onRename)
             Button(I18n.t("reset"), action: onReset)

@@ -330,7 +330,15 @@ struct TimerCardView: View {
         )
         .shadow(color: .black.opacity(hovering ? 0.16 : 0.07), radius: hovering ? 12 : 4, y: hovering ? 6 : 2)
         .animation(.easeOut(duration: 0.15), value: hovering)
-        .onHover { hovering = $0 }
+        .onHover { inside in
+            hovering = inside
+            // 中键重设用：记低游标而家停喺边个计时器上
+            if inside {
+                MiddleClickTracker.shared.hoveredTimerID = timer.id
+            } else if MiddleClickTracker.shared.hoveredTimerID == timer.id {
+                MiddleClickTracker.shared.hoveredTimerID = nil
+            }
+        }
         .contextMenu {
             Button(I18n.t("rename"), action: onRename)
             Button(I18n.t("reset"), action: onReset)

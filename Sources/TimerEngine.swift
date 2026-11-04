@@ -321,6 +321,19 @@ enum Engine {
         return timers.first { view($0, now: now).status != .idle }?.id ?? timers.first?.id
     }
 
+    /// 中键重设的真正目标：
+    /// 1. 游标停在清单某一列（面板／仪表板）→ **就重设嗰个**，不论佢係咪进行中
+    /// 2. 游标唔喺任何列上面（例如撳选单列图示）→ 退回上面嘅「最快到期／第一个」
+    /// 3. 清单系空 → nil
+    ///
+    /// 拆成 pure function 系为咗可以喺 SelfTest 直接验证「指边个重设边个」。
+    static func resetTargetID(_ timers: [TimerItem], hoveredID: String?, now: Double) -> String? {
+        if let hoveredID, timers.contains(where: { $0.id == hoveredID }) {
+            return hoveredID
+        }
+        return menuBarResetTargetID(timers, now: now)
+    }
+
     /// 环形进度条的色调
     static func tone(for v: TimerView) -> RingTone {
         switch v.status {

@@ -9,7 +9,8 @@
 #    ./dev.sh selftest
 #    ./dev.sh render [输出目录]
 #    ./dev.sh probe          验证菜单栏右键菜单
-#    ./dev.sh probe-middle   验证菜单栏中键重设
+#    ./dev.sh probe-middle   验证菜单栏图示中键重设
+#    ./dev.sh probe-row      验证面板内「指边个重设边个」
 # ============================================================================
 
 set -e
@@ -37,8 +38,13 @@ case "${1:-selftest}" in
     echo "--- probe.txt ---"
     cat "$SANDBOX/probe.txt" 2>/dev/null || echo "(没有产出)"
     ;;
+  probe-row)
+    "$APP" --probe-row || true
+    echo "--- probe.txt ---"
+    cat "$SANDBOX/probe.txt" 2>/dev/null || echo "(没有产出)"
+    ;;
   *)
-    echo "用法: ./dev.sh [selftest|render|probe|probe-middle]"
+    echo "用法: ./dev.sh [selftest|render|probe|probe-middle|probe-row]"
     exit 1
     ;;
 esac

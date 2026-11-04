@@ -66,6 +66,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // 开发用：验证面板内中键重设（普通视窗 + hover 目标）
+        if CommandLine.arguments.contains("--probe-row") {
+            Store.shared.startTicking()
+            NSApp.setActivationPolicy(.accessory)
+            StatusMenuController.shared.install()
+            StatusMenuController.shared.runRowProbe()
+            return
+        }
+
         Store.shared.startTicking()
 
         // 菜单栏图示的右键菜单（退出 / 设定 / 仪表板）

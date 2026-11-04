@@ -57,6 +57,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // 开发用：验证菜单栏中键重设（合成一次中键事件）
+        if CommandLine.arguments.contains("--probe-middle") {
+            Store.shared.startTicking()
+            NSApp.setActivationPolicy(.accessory)
+            StatusMenuController.shared.install()
+            StatusMenuController.shared.runMiddleProbe()
+            return
+        }
+
         Store.shared.startTicking()
 
         // 菜单栏图示的右键菜单（退出 / 设定 / 仪表板）

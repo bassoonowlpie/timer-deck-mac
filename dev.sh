@@ -8,7 +8,8 @@
 #  用法：
 #    ./dev.sh selftest
 #    ./dev.sh render [输出目录]
-#    ./dev.sh probe
+#    ./dev.sh probe          验证菜单栏右键菜单
+#    ./dev.sh probe-middle   验证菜单栏中键重设
 # ============================================================================
 
 set -e
@@ -31,8 +32,13 @@ case "${1:-selftest}" in
     echo "--- probe.txt ---"
     cat "$SANDBOX/probe.txt" 2>/dev/null || echo "(没有产出)"
     ;;
+  probe-middle)
+    "$APP" --probe-middle || true
+    echo "--- probe.txt ---"
+    cat "$SANDBOX/probe.txt" 2>/dev/null || echo "(没有产出)"
+    ;;
   *)
-    echo "用法: ./dev.sh [selftest|render|probe]"
+    echo "用法: ./dev.sh [selftest|render|probe|probe-middle]"
     exit 1
     ;;
 esac

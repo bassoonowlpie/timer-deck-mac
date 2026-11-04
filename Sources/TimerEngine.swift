@@ -296,6 +296,23 @@ enum Engine {
         return running.map { $0.segment }
     }
 
+    /// 在菜单栏图示上按鼠标中键时要重设的对象。
+    /// 取「选单列上排最前」那个 —— 也就是最快到期的进行中计时器。
+    /// 没有进行中的 → nil（中键就安静地什么都不做）。
+    static func menuBarResetTargetID(_ timers: [TimerItem], now: Double) -> String? {
+        var bestID: String?
+        var shortest = Double.greatestFiniteMagnitude
+        for t in timers {
+            let v = view(t, now: now)
+            guard v.status == .running else { continue }
+            if v.remaining < shortest {
+                shortest = v.remaining
+                bestID = t.id
+            }
+        }
+        return bestID
+    }
+
     /// 环形进度条的色调
     static func tone(for v: TimerView) -> RingTone {
         switch v.status {

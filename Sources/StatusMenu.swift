@@ -1,16 +1,40 @@
 import SwiftUI
 import AppKit
+import Combine
 
 // ============================================================================
 //  Timer Deck — 菜单栏图示的「右键菜单」与「中键重设」
 //
 //  SwiftUI 的 MenuBarExtra 只处理左键，官方没有提供右键 / 中键 API。
-//  这里用「本地事件监听」拦截落在菜单栏图示上的右键与中键：
+//  这里拦截落在菜单栏图示上的额外按键：
 //    · 右键 → 弹出真正的 NSMenu
-//    · 中键（鼠标滚轮按下去，buttonNumber == 2）→ 重设最快到期的计时器
-//  左键完全不受影响，仍然是原来的面板。整套做法只收本 app 自己的事件，
-//  不需要「辅助使用」权限，也不用改任何系统设定。
+//    · 中键（鼠标滚轮按下去）→ 重设最快到期的计时器
+//
+//  中键要两条路一起装：macOS 的 NSStatusBarWindow 对 .otherMouseDown
+//  不一定会派发给 app 自己，本地监听有机会收不到；全域鼠标监听做兜底，
+//  再用鼠标坐标确认落在图示范围内。全域「鼠标」事件不需要「辅助使用」权限。
+//  左键完全不受影响，仍然是原来的面板。
 // ============================================================================
+
+/// 选单列上的短暂提示（约 2 秒）。按中键之后一定要有可见回应，
+/// 免得用户以为「按了没反应」。
+final class MenuBarFlash: ObservableObject {
+    static let shared = MenuBarFlash()
+
+    @Published var text: String?
+    private var pending: DispatchWorkItem?
+
+    func show(_ message: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.pending?.cancel()
+            self.text = message
+            let clear = DispatchWorkItem { [weak self] in self?.text = nil }
+            self.pending = clear
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: clear)
+        }
+    }
+}
 
 final class StatusMenuController: NSObject {
 
@@ -21,7 +45,9 @@ final class StatusMenuController: NSObject {
     static var openWindow: OpenWindowAction?
 
     private var monitor: Any?
+    private var globalMonitor: Any?
     private weak var statusWindow: NSWindow?
+    private var lastResetAt: Date = .distantPast
 
     // 开发用（--probe-menu）
     private var probeMode = false
@@ -43,18 +69,46 @@ final class StatusMenuController: NSObject {
             // 中键 / 其他额外按键 → 重设。
             // 按事件型别判断而唔靠 buttonNumber：macOS 实机中键系 .otherMouseDown，
             // 但数字会因鼠标驱动而异（合成事件甚至全部报 0），用型别最稳。
-            // 侧键撳中呢个咁细嘅图示几乎唔会发生，一齐当重设亦无妨。
             if event.type == .otherMouseDown { self.resetFromMenuBar() }
             return nil
         }
+
+        // 兜底：状态列视窗有时唔会派发 .otherMouseDown 畀 app 自己，
+        // 本地监听收唔到。全域监听只收「发去其他 process」嘅鼠标事件，
+        // 唔需要任何权限；再用坐标确认系按喺我哋个图示上面。
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.otherMouseDown]
+        ) { [weak self] _ in
+            guard let self, self.isMouseOverStatusBarIcon() else { return }
+            DispatchQueue.main.async { self.resetFromMenuBar() }
+        }
+    }
+
+    /// 全域监听收到事件时，用鼠标坐标判断是否落在选单列图示范围内。
+    /// NSWindow.frame 与 NSEvent.mouseLocation 都用「左下为原点」的屏幕坐标。
+    private func isMouseOverStatusBarIcon() -> Bool {
+        guard let win = NSApp.windows.first(where: { isStatusBarWindow($0) }) else { return false }
+        return win.frame.insetBy(dx: -6, dy: -6).contains(NSEvent.mouseLocation)
     }
 
     /// 重设选单列上排最前（最快到期）的进行中计时器。
     /// 效果跟面板里的「重设」按钮一致：停低、时长度归回初始值、不自动倒数。
+    /// 无论成功与否都在选单列给一个短暂提示，让用户知道按键有被收到。
     private func resetFromMenuBar() {
+        // 本地与全域监听可能同时看到同一次点击，0.4 秒内只处理一次
+        let now = Date()
+        guard now.timeIntervalSince(lastResetAt) > 0.4 else { return }
+
         let store = Store.shared
-        guard let id = Engine.menuBarResetTargetID(store.timers, now: store.now) else { return }
+        guard let id = Engine.menuBarResetTargetID(store.timers, now: store.now) else {
+            MenuBarFlash.shared.show(I18n.t("flashNoRunning"))
+            return
+        }
+
+        lastResetAt = now
+        let name = store.timers.first(where: { $0.id == id })?.name ?? ""
         Actions.reset(id)
+        MenuBarFlash.shared.show("✓ " + I18n.t("toastReset") + " · " + String(name.prefix(10)))
         if probeMode { probeLog.append("✅ 中键重设 → \(id)") }
     }
 

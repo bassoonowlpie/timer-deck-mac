@@ -13,7 +13,7 @@ macOS 選單列計時器 —— 無需開啟視窗，隨時掌握剩餘時間。
 - **選單列直接看倒數** —— 進行中的計時器一律並列顯示名稱與剩餘時間（`Honor 18:05 · iPhone 18:07`），各自以該計時器的顏色區分；同時多個時按剩餘時間排序，最快到期的排最前
 - **預設計時器一鍵啟動** —— 常用時長可預先儲存，新增後自動開始倒數
 - **右鍵選單** —— 右鍵點擊選單列圖示，即可開啟儀表板、設定或退出
-- **中鍵重設** —— 以滑鼠滾軸按鈕點擊選單列圖示，即重設最快到期的計時器（效果與面板的「重設」按鈕相同：停止倒數並回復初始時長）；無需開啟面板，亦無需任何系統權限
+- **中鍵重設** —— 以滑鼠滾軸按鈕點擊選單列圖示，即重設最快到期的計時器（效果與面板的「重設」按鈕相同：停止倒數並回復初始時長）；無需開啟面板，亦無需任何系統權限；按下後選單列會短暫顯示確認訊息
 - **提示音可選** —— 內建四種音效（ping / chime / bell / alarm）
 - **深色與淺色模式**，介面支援中英雙語
 - **完全離線** —— 不連線網路，所有資料均儲存於本機
@@ -104,7 +104,7 @@ open ".build/Timer Deck.app"
 
 **Timer Deck** is a lightweight menu-bar timer for macOS 13+ (Apple Silicon). Timers stay one click away and the countdown is shown directly in the menu bar: every running timer is listed as its name plus remaining time (`Honor 18:05 · iPhone 18:07`), each in that timer's own accent color. Multiple running timers are sorted by remaining time, soonest first. Everything is stored locally — the app makes no network requests.
 
-**Middle-click to reset:** clicking the menu-bar icon with the scroll-wheel button resets the timer that is closest to expiry. This matches the in-panel *Reset* button — the timer stops and returns to its initial duration. No panel needs to be open and no system permissions are required. Right-click the icon for the dashboard, settings, and quit menu.
+**Middle-click to reset:** clicking the menu-bar icon with the scroll-wheel button resets the timer that is closest to expiry. This matches the in-panel *Reset* button — the timer stops and returns to its initial duration. No panel needs to be open and no system permissions are required; the menu bar briefly shows a confirmation after each press. Right-click the icon for the dashboard, settings, and quit menu.
 
 **Install:** download the latest `TimerDeck-x.x.x-macOS.zip` from [Releases](https://github.com/bassoonowlpie/timer-deck-mac/releases/latest), unzip, and drag `Timer Deck.app` into `/Applications`.
 

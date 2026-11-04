@@ -108,6 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct MenuBarLabel: View {
     @ObservedObject private var store = Store.shared
+    @ObservedObject private var flash = MenuBarFlash.shared
     @Environment(\.openWindow) private var openWindow
 
     /// 关了「選單列顯示」就什么都不显示，只留图示
@@ -117,7 +118,7 @@ struct MenuBarLabel: View {
     }
 
     var body: some View {
-        MenuBarLabelContent(segments: segments)
+        MenuBarLabelContent(segments: segments, flash: flash.text)
             .accessibilityLabel("Timer Deck")
             .onAppear {
                 // 让菜单栏的右键菜单也能开视窗
@@ -129,6 +130,8 @@ struct MenuBarLabel: View {
 /// 图示 + 文字。抽出来是为了能离屏渲染成预览图。
 struct MenuBarLabelContent: View {
     var segments: [Engine.MenuBarSegment] = []
+    /// 短暂的操作回應（例如中键重设），有值时会盖过倒数文字约 2 秒
+    var flash: String? = nil
 
     /// 所有计时器拼成「单一」文字 —— 真实菜单栏对 HStack 里多个 Text 的渲染会掉字，
     /// 只出第一个；合成一个 AttributedString 才稳定，还能各自保留颜色。
@@ -150,7 +153,12 @@ struct MenuBarLabelContent: View {
     var body: some View {
         HStack(spacing: 3) {
             Image(systemName: "timer")
-            if !segments.isEmpty {
+            if let flash {
+                Text(flash)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color(hex: "#FFA94D"))
+                    .lineLimit(1)
+            } else if !segments.isEmpty {
                 Text(label)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .monospacedDigit()

@@ -87,12 +87,13 @@ open ".build/Timer Deck.app"
 
 ## 資料存放位置
 
+所有計時器與偏好設定均存放於單一 JSON 檔案：
+
 | 內容 | 路徑 |
 | --- | --- |
-| 計時器資料 | `~/Library/Application Support/TimerDeck/deck.json` |
-| 偏好設定 | `~/Library/Preferences/com.bassoonowlpie.timerdeck.plist` |
+| 計時器、偏好設定 | `~/Library/Application Support/TimerDeck/deck.json` |
 
-如需備份或移轉至新機，複製這兩個檔案即可。解除安裝則為刪除應用程式及上述兩個檔案。
+如需備份或移轉至新機，複製此檔案即可。解除安裝則為刪除應用程式及此檔案。
 
 ## 授權
 
@@ -102,7 +103,7 @@ open ".build/Timer Deck.app"
 
 ## English
 
-**Timer Deck** is a lightweight menu-bar timer for macOS 13+ (Apple Silicon). Timers stay one click away and the countdown is shown directly in the menu bar: every running timer is listed as its name plus remaining time (`Honor 18:05 · iPhone 18:07`), each in that timer's own accent color. Multiple running timers are sorted by remaining time, soonest first. Everything is stored locally — the app makes no network requests.
+**Timer Deck** is a lightweight menu-bar timer for macOS 13+ (Apple Silicon). Timers stay one click away and the countdown is shown directly in the menu bar: every running timer is listed as its name plus remaining time (`Honor 18:05 · iPhone 18:07`), each in that timer's own accent color. Multiple running timers are sorted by remaining time, soonest first. Everything is stored locally in a single file, `~/Library/Application Support/TimerDeck/deck.json` — the app makes no network requests.
 
 **Middle-click to reset:** with the pointer over any timer in the panel or dashboard, pressing the scroll-wheel button resets that specific timer, whether or not it is currently running. Pressing it on the menu-bar icon instead resets the timer closest to expiry (or a paused/finished one, or the first timer in the list when none are running). This matches the *Reset* button: the timer stops and returns to its initial duration. No system permissions are required, and a brief confirmation is shown after each press. Right-click the icon for the dashboard, settings, and quit menu.
 

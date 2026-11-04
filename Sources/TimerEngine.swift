@@ -296,10 +296,14 @@ enum Engine {
         return running.map { $0.segment }
     }
 
-    /// 在菜单栏图示上按鼠标中键时要重设的对象。
-    /// 取「选单列上排最前」那个 —— 也就是最快到期的进行中计时器。
-    /// 没有进行中的 → nil（中键就安静地什么都不做）。
+    /// 在菜单栏图示上按鼠标中键时要重设的对象 —— **唔限「进行中」**。
+    /// 1. 有进行中 → 选单列排最前（最快到期）那个
+    /// 2. 没有进行中 → 第一个非 idle（暂停／已完成）
+    /// 3. 全部都是 idle → 清单第一个
+    /// 4. 一个计时器都没有 → nil
     static func menuBarResetTargetID(_ timers: [TimerItem], now: Double) -> String? {
+        guard !timers.isEmpty else { return nil }
+
         var bestID: String?
         var shortest = Double.greatestFiniteMagnitude
         for t in timers {
@@ -310,7 +314,11 @@ enum Engine {
                 bestID = t.id
             }
         }
-        return bestID
+        if let bestID { return bestID }
+
+        // 冇任何進行中嘅計時器都要有得重設：
+        // 先揀第一個暫停／已完成嘅，再唔係就揀清單第一個。
+        return timers.first { view($0, now: now).status != .idle }?.id ?? timers.first?.id
     }
 
     /// 环形进度条的色调

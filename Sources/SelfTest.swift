@@ -116,12 +116,24 @@ enum SelfTest {
         check("一个在跑 + 一个暂停 → 只显示跑的",
               Engine.menuBarSegments([a, t], now: now).map(\.text) == ["05:00"])
 
-        print("\n=== 7b. 菜单栏中键重设对象 ===")
-        check("没有进行中 → 不重设任何东西", Engine.menuBarResetTargetID([t], now: now) == nil)
-        check("只有一个 → 重设它", Engine.menuBarResetTargetID([a], now: now) == a.id)
-        check("两个 → 重设最快到期的", Engine.menuBarResetTargetID([a, b], now: now) == b.id)
+        print("\n=== 7b. 菜单栏中键重设对象（唔限进行中）===")
+        check("空清单 → nil", Engine.menuBarResetTargetID([], now: now) == nil)
+        check("没有进行中 → 仍然重设它", Engine.menuBarResetTargetID([t], now: now) == t.id)
+        let idle1 = Engine.makeTimer(name: "待用A", seconds: 60)
+        let idle2 = Engine.makeTimer(name: "待用B", seconds: 120)
+        var paused = Engine.makeTimer(name: "暫停中", seconds: 300)
+        paused.status = .paused
+        paused.remaining = 120_000
+        check("全部静止 → 重设清单第一个",
+              Engine.menuBarResetTargetID([idle1, idle2], now: now) == idle1.id)
+        check("只有暂停 → 重设它", Engine.menuBarResetTargetID([paused], now: now) == paused.id)
+        check("暂停 + 静止 → 优先重设暂停的",
+              Engine.menuBarResetTargetID([idle1, paused], now: now) == paused.id)
+        check("只有一个进行中 → 重设它", Engine.menuBarResetTargetID([a], now: now) == a.id)
+        check("两个进行中 → 重设最快到期的", Engine.menuBarResetTargetID([a, b], now: now) == b.id)
         check("顺序对调结果一样", Engine.menuBarResetTargetID([b, a], now: now) == b.id)
-        check("暂停的不会被选中", Engine.menuBarResetTargetID([t, b], now: now) == b.id)
+        check("有进行中时，暂停的不会被选中", Engine.menuBarResetTargetID([t, b], now: now) == b.id)
+
 
         print("\n=== 8. 铃声版本迁移 ===")
         check("SOUND_VERSION = 2", Engine.soundVersion == 2)

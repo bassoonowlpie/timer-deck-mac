@@ -84,11 +84,19 @@ final class StatusMenuController: NSObject {
         }
     }
 
-    /// 全域监听收到事件时，用鼠标坐标判断是否落在选单列图示范围内。
+    /// 全域监听收到事件时，用鼠标坐标判断是否按在选单列图示一带。
+    /// 只要求 y 落在菜单栏条带（屏幕顶 34pt）；x 由图示范围向左放宽 160pt ——
+    /// 图示会随「名称 + 时间」文字变宽，实测亦有用户按在图示左 28pt 嘅位置。
     /// NSWindow.frame 与 NSEvent.mouseLocation 都用「左下为原点」的屏幕坐标。
     private func isMouseOverStatusBarIcon() -> Bool {
-        guard let win = NSApp.windows.first(where: { isStatusBarWindow($0) }) else { return false }
-        return win.frame.insetBy(dx: -6, dy: -6).contains(NSEvent.mouseLocation)
+        let p = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(p) }) ?? NSScreen.main else {
+            return false
+        }
+        guard p.y >= screen.frame.maxY - 34 else { return false }
+
+        guard let win = NSApp.windows.first(where: { isStatusBarWindow($0) }) else { return true }
+        return p.x >= win.frame.minX - 160 && p.x <= win.frame.maxX + 40
     }
 
     /// 重设选单列上排最前（最快到期）的进行中计时器。
@@ -101,7 +109,7 @@ final class StatusMenuController: NSObject {
 
         let store = Store.shared
         guard let id = Engine.menuBarResetTargetID(store.timers, now: store.now) else {
-            MenuBarFlash.shared.show(I18n.t("flashNoRunning"))
+            MenuBarFlash.shared.show(I18n.t("flashNoTimers"))
             return
         }
 
@@ -207,6 +215,10 @@ final class StatusMenuController: NSObject {
 
             let names = NSApp.windows.map { String(describing: type(of: $0)) }
             self.probeLog.append("NSApp.windows = [\(names.joined(separator: ", "))]")
+            for w in NSApp.windows {
+                self.probeLog.append("  window \(String(describing: type(of: w))) frame=\(w.frame)")
+            }
+            self.probeLog.append("  屏幕 frame=\(NSScreen.main?.frame ?? .zero)")
 
             let win = NSApp.windows.first { self.isStatusBarWindow($0) }
             self.probeLog.append("找到菜单栏图示视窗 = \(win.map { String(describing: type(of: $0)) } ?? "❌ 找不到")")
@@ -260,6 +272,10 @@ final class StatusMenuController: NSObject {
 
             let names = NSApp.windows.map { String(describing: type(of: $0)) }
             self.probeLog.append("NSApp.windows = [\(names.joined(separator: ", "))]")
+            for w in NSApp.windows {
+                self.probeLog.append("  window \(String(describing: type(of: w))) frame=\(w.frame)")
+            }
+            self.probeLog.append("  屏幕 frame=\(NSScreen.main?.frame ?? .zero)")
 
             guard let win = NSApp.windows.first(where: { self.isStatusBarWindow($0) }) else {
                 self.probeLog.append("❌ 找不到菜单栏图示视窗")
